@@ -1,0 +1,344 @@
+{
+  "name": "Order Processing",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "order",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1216,
+        -144
+      ],
+      "id": "5b56305c-e5ca-4ef6-9a8f-4fa6b4d3cc3a",
+      "name": "Webhook",
+      "webhookId": "b03677d8-0f0f-410c-a98b-933158a1433e"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "716d0311-186f-470d-814e-cbbc2f659338",
+              "name": "orderId",
+              "value": "={{ $json.body.orderId }}",
+              "type": "string"
+            },
+            {
+              "id": "4f414999-0e22-4060-ada7-b90d1f4d6b8a",
+              "name": "email",
+              "value": "={{$json.body.email}}",
+              "type": "string"
+            },
+            {
+              "id": "8092da9b-8ff9-4a20-9867-a22635b27d3d",
+              "name": "amount",
+              "value": "={{Number($json.body.amount)}}",
+              "type": "number"
+            },
+            {
+              "id": "46002c37-846a-497b-a99c-199a7ed82da3",
+              "name": "dryRun",
+              "value": "={{$json.body.dryRun}}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1040,
+        -144
+      ],
+      "id": "4c691887-9af4-44e2-82ce-b8caba16a440",
+      "name": "Normalize Input"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "06356e3c-287d-4729-be61-bf6d22dc6400",
+              "leftValue": "={{$json.dryRun}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -592,
+        -240
+      ],
+      "id": "7fea2168-f90b-4e4b-b394-f20d0150cb0b",
+      "name": "Dry Run Check"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3001/pay",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  amount: $json.amount,\n  orderId: $json.orderId\n} }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -160,
+        -144
+      ],
+      "id": "ba13b43f-1ae9-4a4a-b220-329eb6219ebf",
+      "name": "Process Payment",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ac97fa67-0bd0-4e2c-8e15-695e7bf45652",
+              "leftValue": "={{$json.success}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        32,
+        -144
+      ],
+      "id": "b2f2faf0-043a-4543-b833-6353a5f2e17e",
+      "name": "Payment Success"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": false,\n  \"message\": \"Payment failed\"\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        240,
+        -48
+      ],
+      "id": "666be4e2-2637-4f38-a22c-b6f847fca182",
+      "name": "Failed"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": true,\n  \"message\": \"Payment processed\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        240,
+        -240
+      ],
+      "id": "d615f1d8-eb4b-497c-9ff5-6cadd721f4db",
+      "name": "Success"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": true,\n  \"dryRun\": true,\n  \"message\": \"Dry run completed\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -384,
+        -320
+      ],
+      "id": "40186120-b373-40d1-917c-1cf7f9131ec5",
+      "name": "Dry Run Success"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const fs = require('fs');\n\nconst path = './data/processed-orders.json';\n\nconst data = JSON.parse(\n  fs.readFileSync(path)\n);\n\nconst orderId = $json.orderId;\n\nif (data.includes(orderId)) {\n  throw new Error('Duplicate order');\n}\n\ndata.push(orderId);\n\nfs.writeFileSync(\n  path,\n  JSON.stringify(data, null, 2)\n);\n\nreturn $input.item;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -352,
+        -144
+      ],
+      "id": "646f77c1-24d3-4e19-b03d-be9e14312989",
+      "name": "Check Duplicate Order"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "96K0mfkjWKh2HYsA",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/96K0mfkjWKh2HYsA",
+          "cachedResultName": "Validate Order"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        -832,
+        -144
+      ],
+      "id": "88b36a86-545d-43f0-908c-432ab2b5d72a",
+      "name": "Validate Order"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Input": {
+      "main": [
+        [
+          {
+            "node": "Validate Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dry Run Check": {
+      "main": [
+        [
+          {
+            "node": "Dry Run Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Duplicate Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Payment": {
+      "main": [
+        [
+          {
+            "node": "Payment Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Payment Success": {
+      "main": [
+        [
+          {
+            "node": "Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Duplicate Order": {
+      "main": [
+        [
+          {
+            "node": "Process Payment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Order": {
+      "main": [
+        [
+          {
+            "node": "Dry Run Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "905c135a-0469-429e-94a2-b77434397f0a",
+  "meta": {
+    "instanceId": "4c73094ef6f69f62cfb73a526ad4ed3c04092351a2ee777b5a033f591ccd45ca"
+  },
+  "id": "zaLldAVBFFWQUo7o",
+  "tags": []
+}

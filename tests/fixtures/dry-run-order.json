@@ -1,0 +1,6 @@
+{
+	"orderId": "ORD-2",
+	"email": "dry@test.com",
+	"amount": 200,
+	"dryRun": true
+}
