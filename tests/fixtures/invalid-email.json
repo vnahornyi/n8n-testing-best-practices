@@ -1,0 +1,6 @@
+{
+  "orderId": "ORD-1003",
+  "email": "not-an-email",
+  "amount": 110,
+  "dryRun": false
+}

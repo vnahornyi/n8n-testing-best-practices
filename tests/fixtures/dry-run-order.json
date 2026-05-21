@@ -1,6 +1,6 @@
 {
-	"orderId": "ORD-2",
-	"email": "dry@test.com",
-	"amount": 200,
-	"dryRun": true
+  "orderId": "ORD-DRY-1002",
+  "email": "dryrun@example.com",
+  "amount": 90,
+  "dryRun": true
 }

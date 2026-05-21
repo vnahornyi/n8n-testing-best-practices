@@ -3,241 +3,382 @@
   "nodes": [
     {
       "parameters": {
+        "jsCode": "const { z } = require('zod');\n\nconst OrderSchema = z.object({\n  orderId: z.string().min(1, 'orderId is required'),\n  email: z.string().email('email must be valid'),\n  amount: z.number().positive('amount must be positive'),\n  dryRun: z.boolean().optional().default(false),\n  forceFail: z.boolean().optional(),\n  simulateTransientFailure: z.boolean().optional()\n});\n\nconst input = $input.first().json;\nconst parsed = OrderSchema.safeParse(input);\n\nif (!parsed.success) {\n  return [\n    {\n      json: {\n        valid: false,\n        success: false,\n        message: 'Invalid payload',\n        errors: parsed.error.flatten()\n      }\n    }\n  ];\n}\n\nreturn [\n  {\n    json: {\n      valid: true,\n      success: true,\n      message: 'Payload validated',\n      ...parsed.data\n    }\n  }\n];"
+      },
+      "id": "1e76ba4c-eb29-4b35-aa9d-5662b4efb647",
+      "name": "Zod Validation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -256,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ String($json.success) }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          }
+        },
+        "options": {}
+      },
+      "id": "f9243554-568f-4498-9d9c-5f03d2c1f0fb",
+      "name": "Validation Result IF",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -32,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: false, message: $json.message ?? 'Invalid payload', errors: $json.errors ?? null } }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "342195e9-6ef4-4c26-b48a-cd1bc6d50448",
+      "name": "Respond Validation Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        224,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, message: 'Dry run completed: payment not executed', dryRun: true, orderId: $json.orderId } }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "b91fb6ff-4fc4-4a7a-b37f-a693fcc24c22",
+      "name": "Respond Dry Run",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        432,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ String($json.duplicate) }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          }
+        },
+        "options": {}
+      },
+      "id": "51840c0c-a06c-4604-8d37-a5a73e540b1b",
+      "name": "Duplicate IF",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        656,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: false, message: $json.message ?? 'Duplicate order detected', orderId: $json.orderId } }}",
+        "options": {
+          "responseCode": "={{$json.message === 'Duplicate order detected' ? 409 : 400}}"
+        }
+      },
+      "id": "93cded03-5a71-44bd-ba41-c90eefb04812",
+      "name": "Respond Duplicate",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        896,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ String($json.success) }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          }
+        },
+        "options": {}
+      },
+      "id": "43e6d74e-e5b6-469e-bca2-5e1a4185b0a8",
+      "name": "Payment Success IF",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1120,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, message: 'Payment processed', paymentId: $json.paymentId ?? null, orderId: $json.orderId ?? null } }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "bbe33c4f-b4a2-4eeb-bd31-fdb577c7d4ef",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1344,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: false, message: $json.error ?? $json.message ?? 'Payment failed', orderId: $json.orderId ?? null } }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "961690f7-f95f-4566-8f12-516073e7fabe",
+      "name": "Respond Failure",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1344,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ String($json.dryRun) }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          }
+        },
+        "options": {}
+      },
+      "id": "2d52c24a-f08a-47b9-9dbd-f48ff81dc422",
+      "name": "Dry Run Check1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        224,
+        160
+      ]
+    },
+    {
+      "parameters": {
         "httpMethod": "POST",
         "path": "order",
         "responseMode": "responseNode",
         "options": {}
       },
+      "id": "cc5a96db-e8f6-4182-abf3-444dee587a6e",
+      "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        -1216,
-        -144
+        -688,
+        192
       ],
-      "id": "5b56305c-e5ca-4ef6-9a8f-4fa6b4d3cc3a",
-      "name": "Webhook",
-      "webhookId": "b03677d8-0f0f-410c-a98b-933158a1433e"
+      "webhookId": "b0ca8c29-8f87-45d4-8995-77dd3a3c8439"
     },
     {
       "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "716d0311-186f-470d-814e-cbbc2f659338",
-              "name": "orderId",
-              "value": "={{ $json.body.orderId }}",
-              "type": "string"
-            },
-            {
-              "id": "4f414999-0e22-4060-ada7-b90d1f4d6b8a",
-              "name": "email",
-              "value": "={{$json.body.email}}",
-              "type": "string"
-            },
-            {
-              "id": "8092da9b-8ff9-4a20-9867-a22635b27d3d",
-              "name": "amount",
-              "value": "={{Number($json.body.amount)}}",
-              "type": "number"
-            },
-            {
-              "id": "46002c37-846a-497b-a99c-199a7ed82da3",
-              "name": "dryRun",
-              "value": "={{$json.body.dryRun}}",
-              "type": "boolean"
-            }
-          ]
-        },
-        "options": {}
+        "jsCode": "const source = $input.first().json;\n\nlet payload = source;\nif (source && typeof source === 'object' && source.body !== undefined) {\n  payload = source.body;\n}\n\nif (typeof payload === 'string') {\n  try {\n    payload = JSON.parse(payload);\n  } catch {\n    payload = {};\n  }\n}\n\nif (!payload || typeof payload !== 'object' || Array.isArray(payload)) {\n  payload = {};\n}\n\nreturn [{ json: payload }];"
       },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
+      "id": "fdaed72b-9af3-45da-8bba-6c103fe6b7d3",
+      "name": "Normalize Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
-        -1040,
-        -144
-      ],
-      "id": "4c691887-9af4-44e2-82ce-b8caba16a440",
-      "name": "Normalize Input"
+        -464,
+        192
+      ]
     },
     {
       "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "06356e3c-287d-4729-be61-bf6d22dc6400",
-              "leftValue": "={{$json.dryRun}}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
+        "jsCode": "const fs = require('fs');\nconst path = fs.existsSync('/data')\n  ? '/data/processed-orders.json'\n  : './data/processed-orders.json';\n\ntry {\n  if (!fs.existsSync(path)) {\n    fs.writeFileSync(path, JSON.stringify([], null, 2));\n  }\n\n  const data = JSON.parse(fs.readFileSync(path, 'utf8'));\n  const orderId = $json.orderId;\n\n  if (!Array.isArray(data)) {\n    return [{\n      json: {\n        success: false,\n        duplicate: true,\n        message: 'Idempotency store is corrupted',\n        orderId\n      }\n    }];\n  }\n\n  if (data.includes(orderId)) {\n    return [{\n      json: {\n        success: false,\n        duplicate: true,\n        message: 'Duplicate order detected',\n        orderId\n      }\n    }];\n  }\n\n  data.push(orderId);\n  fs.writeFileSync(path, JSON.stringify(data, null, 2));\n\n  return [{\n    json: {\n      ...$json,\n      duplicate: false\n    }\n  }];\n} catch (error) {\n  return [{\n    json: {\n      success: false,\n      duplicate: true,\n      message: 'Idempotency check failed: ' + error.message,\n      orderId: $json.orderId\n    }\n  }];\n}"
       },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
+      "id": "05b93bc9-e906-4277-adb8-279aa087c480",
+      "name": "Check Duplicate Order",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
-        -592,
-        -240
-      ],
-      "id": "7fea2168-f90b-4e4b-b394-f20d0150cb0b",
-      "name": "Dry Run Check"
+        432,
+        256
+      ]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "http://localhost:3001/pay",
+        "url": "http://payment-mock:3001/pay",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ {\n  amount: $json.amount,\n  orderId: $json.orderId\n} }}",
-        "options": {}
+        "jsonBody": "={{ { orderId: $json.orderId, amount: $json.amount, forceFail: $json.forceFail ?? false, simulateTransientFailure: $json.simulateTransientFailure ?? false } }}",
+        "options": {
+          "ignoreResponseCode": true
+        }
       },
+      "id": "12f0d9e1-db65-4363-a81f-34c7a2027f22",
+      "name": "Process Payment",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        -160,
-        -144
+        896,
+        320
       ],
-      "id": "ba13b43f-1ae9-4a4a-b220-329eb6219ebf",
-      "name": "Process Payment",
-      "retryOnFail": true
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "ac97fa67-0bd0-4e2c-8e15-695e7bf45652",
-              "leftValue": "={{$json.success}}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "true",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        32,
-        -144
-      ],
-      "id": "b2f2faf0-043a-4543-b833-6353a5f2e17e",
-      "name": "Payment Success"
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "{\n  \"success\": false,\n  \"message\": \"Payment failed\"\n}",
-        "options": {
-          "responseCode": 400
-        }
-      },
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.5,
-      "position": [
-        240,
-        -48
-      ],
-      "id": "666be4e2-2637-4f38-a22c-b6f847fca182",
-      "name": "Failed"
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "{\n  \"success\": true,\n  \"message\": \"Payment processed\"\n}",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.5,
-      "position": [
-        240,
-        -240
-      ],
-      "id": "d615f1d8-eb4b-497c-9ff5-6cadd721f4db",
-      "name": "Success"
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "{\n  \"success\": true,\n  \"dryRun\": true,\n  \"message\": \"Dry run completed\"\n}",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.5,
-      "position": [
-        -384,
-        -320
-      ],
-      "id": "40186120-b373-40d1-917c-1cf7f9131ec5",
-      "name": "Dry Run Success"
-    },
-    {
-      "parameters": {
-        "mode": "runOnceForEachItem",
-        "jsCode": "const fs = require('fs');\n\nconst path = './data/processed-orders.json';\n\nconst data = JSON.parse(\n  fs.readFileSync(path)\n);\n\nconst orderId = $json.orderId;\n\nif (data.includes(orderId)) {\n  throw new Error('Duplicate order');\n}\n\ndata.push(orderId);\n\nfs.writeFileSync(\n  path,\n  JSON.stringify(data, null, 2)\n);\n\nreturn $input.item;"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -352,
-        -144
-      ],
-      "id": "646f77c1-24d3-4e19-b03d-be9e14312989",
-      "name": "Check Duplicate Order"
-    },
-    {
-      "parameters": {
-        "workflowId": {
-          "__rl": true,
-          "value": "96K0mfkjWKh2HYsA",
-          "mode": "list",
-          "cachedResultUrl": "/workflow/96K0mfkjWKh2HYsA",
-          "cachedResultName": "Validate Order"
-        },
-        "workflowInputs": {
-          "mappingMode": "defineBelow",
-          "value": {},
-          "matchingColumns": [],
-          "schema": [],
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": true
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.3,
-      "position": [
-        -832,
-        -144
-      ],
-      "id": "88b36a86-545d-43f0-908c-432ab2b5d72a",
-      "name": "Validate Order"
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
     }
   ],
   "pinData": {},
   "connections": {
+    "Zod Validation": {
+      "main": [
+        [
+          {
+            "node": "Validation Result IF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validation Result IF": {
+      "main": [
+        [
+          {
+            "node": "Dry Run Check1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Duplicate IF": {
+      "main": [
+        [
+          {
+            "node": "Respond Duplicate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Process Payment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Payment Success IF": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dry Run Check1": {
+      "main": [
+        [
+          {
+            "node": "Respond Dry Run",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Duplicate Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Webhook": {
       "main": [
         [
@@ -253,54 +394,7 @@
       "main": [
         [
           {
-            "node": "Validate Order",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Dry Run Check": {
-      "main": [
-        [
-          {
-            "node": "Dry Run Success",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Check Duplicate Order",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Process Payment": {
-      "main": [
-        [
-          {
-            "node": "Payment Success",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Payment Success": {
-      "main": [
-        [
-          {
-            "node": "Success",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Failed",
+            "node": "Zod Validation",
             "type": "main",
             "index": 0
           }
@@ -311,18 +405,18 @@
       "main": [
         [
           {
-            "node": "Process Payment",
+            "node": "Duplicate IF",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Validate Order": {
+    "Process Payment": {
       "main": [
         [
           {
-            "node": "Dry Run Check",
+            "node": "Payment Success IF",
             "type": "main",
             "index": 0
           }
@@ -330,12 +424,12 @@
       ]
     }
   },
-  "active": true,
+  "active": false,
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "905c135a-0469-429e-94a2-b77434397f0a",
+  "versionId": "7289e3f6-54e2-4fc8-a542-29e931d025a8",
   "meta": {
     "instanceId": "4c73094ef6f69f62cfb73a526ad4ed3c04092351a2ee777b5a033f591ccd45ca"
   },

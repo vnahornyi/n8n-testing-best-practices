@@ -1,0 +1,7 @@
+{
+  "orderId": "ORD-1007",
+  "email": "buyer@example.com",
+  "amount": 140,
+  "dryRun": false,
+  "forceFail": true
+}

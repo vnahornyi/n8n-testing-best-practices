@@ -1,6 +1,6 @@
 {
-  "orderId": "ORD-1001",
+  "orderId": "ORD-DUPE-1006",
   "email": "buyer@example.com",
-  "amount": 120,
+  "amount": 150,
   "dryRun": false
 }
