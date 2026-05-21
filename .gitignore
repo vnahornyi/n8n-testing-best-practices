@@ -2,3 +2,4 @@ node_modules
 .n8n
 .n8n-docker
 data/processed-orders.json
+.DS_Store
