@@ -3,21 +3,26 @@
   "nodes": [
     {
       "parameters": {
-        "jsCode": "const { z } = require('zod');\n\nconst OrderSchema = z.object({\n  orderId: z.string().min(1, 'orderId is required'),\n  email: z.string().email('email must be valid'),\n  amount: z.number().positive('amount must be positive'),\n  dryRun: z.boolean().optional().default(false),\n  forceFail: z.boolean().optional(),\n  simulateTransientFailure: z.boolean().optional()\n});\n\nconst input = $input.first().json;\nconst parsed = OrderSchema.safeParse(input);\n\nif (!parsed.success) {\n  return [\n    {\n      json: {\n        valid: false,\n        success: false,\n        message: 'Invalid payload',\n        errors: parsed.error.flatten()\n      }\n    }\n  ];\n}\n\nreturn [\n  {\n    json: {\n      valid: true,\n      success: true,\n      message: 'Payload validated',\n      ...parsed.data\n    }\n  }\n];"
+        "jsCode": "const { z } = require('zod');\n\nconst OrderSchema = z.object({\n  orderId: z.string().min(1, 'orderId is required'),\n  email: z.string().email('email must be valid'),\n  amount: z.number().positive('amount must be positive'),\n  dryRun: z.boolean().optional().default(false),\n  forceFail: z.boolean().optional(),\n  simulateTransientFailure: z.boolean().optional()\n});\n\nconst input = $input.first().json;\nconst parsed = OrderSchema.safeParse(input);\n\nif (!parsed.success) {\n  return [\n    {\n      json: {\n        valid: false,\n        success: false,\n        message: 'Invalid payload',\n      }\n    }\n  ];\n}\n\nreturn [\n  {\n    json: {\n      valid: true,\n      success: true,\n      message: 'Payload validated',\n      ...parsed.data\n    }\n  }\n];"
       },
-      "id": "1e76ba4c-eb29-4b35-aa9d-5662b4efb647",
+      "id": "e90a890a-d4a8-4ab6-82c7-a6afa293dcb3",
       "name": "Zod Validation",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -256,
-        192
+        -4400,
+        0
       ]
     },
     {
       "parameters": {
         "conditions": {
-          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
           "conditions": [
             {
               "leftValue": "={{ String($json.success) }}",
@@ -25,42 +30,38 @@
               "operator": {
                 "type": "string",
                 "operation": "equals"
-              }
+              },
+              "id": "72f662e1-cacd-4123-9499-987079a7ac19"
             }
           ],
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 1
-          }
+          "combinator": "and"
         },
         "options": {}
       },
-      "id": "f9243554-568f-4498-9d9c-5f03d2c1f0fb",
+      "id": "f9343df7-e125-4db6-8101-60132947b0c6",
       "name": "Validation Result IF",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -32,
-        192
+        -4176,
+        0
       ]
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ { success: false, message: $json.message ?? 'Invalid payload', errors: $json.errors ?? null } }}",
+        "responseBody": "={{ { success: false, message: $json.message ?? 'Invalid payload' } }}",
         "options": {
           "responseCode": 400
         }
       },
-      "id": "342195e9-6ef4-4c26-b48a-cd1bc6d50448",
+      "id": "f096d785-c247-4446-8e4c-e3ba13aa19b3",
       "name": "Respond Validation Error",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        224,
-        368
+        -3920,
+        176
       ]
     },
     {
@@ -71,13 +72,13 @@
           "responseCode": 200
         }
       },
-      "id": "b91fb6ff-4fc4-4a7a-b37f-a693fcc24c22",
+      "id": "a40cc9a9-9682-4d4e-80b4-ce0e55763e8a",
       "name": "Respond Dry Run",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        432,
-        48
+        -3712,
+        -144
       ]
     },
     {
@@ -103,13 +104,13 @@
         },
         "options": {}
       },
-      "id": "51840c0c-a06c-4604-8d37-a5a73e540b1b",
+      "id": "de2d8390-111e-45c9-b79f-cbb4581059da",
       "name": "Duplicate IF",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        656,
-        256
+        -3488,
+        64
       ]
     },
     {
@@ -120,13 +121,13 @@
           "responseCode": "={{$json.message === 'Duplicate order detected' ? 409 : 400}}"
         }
       },
-      "id": "93cded03-5a71-44bd-ba41-c90eefb04812",
+      "id": "b23e3e43-3c2b-4204-a569-0f1e4b86ea39",
       "name": "Respond Duplicate",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        896,
-        176
+        -3248,
+        -16
       ]
     },
     {
@@ -152,13 +153,13 @@
         },
         "options": {}
       },
-      "id": "43e6d74e-e5b6-469e-bca2-5e1a4185b0a8",
+      "id": "5bf00d33-6a9f-4e26-92cf-9b90cd4461c4",
       "name": "Payment Success IF",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        1120,
-        320
+        -3024,
+        128
       ]
     },
     {
@@ -169,13 +170,13 @@
           "responseCode": 200
         }
       },
-      "id": "bbe33c4f-b4a2-4eeb-bd31-fdb577c7d4ef",
+      "id": "cc696765-55f5-4492-b4ab-7e59d1897a6d",
       "name": "Respond Success",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        1344,
-        240
+        -2800,
+        48
       ]
     },
     {
@@ -186,13 +187,13 @@
           "responseCode": 400
         }
       },
-      "id": "961690f7-f95f-4566-8f12-516073e7fabe",
+      "id": "9ebc1e26-651e-40fc-884a-bfb52aa4e397",
       "name": "Respond Failure",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        1344,
-        416
+        -2800,
+        224
       ]
     },
     {
@@ -218,13 +219,13 @@
         },
         "options": {}
       },
-      "id": "2d52c24a-f08a-47b9-9dbd-f48ff81dc422",
+      "id": "490811da-6ba8-4809-a4ae-1ef9d9e5bbe3",
       "name": "Dry Run Check1",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        224,
-        160
+        -3920,
+        -32
       ]
     },
     {
@@ -234,13 +235,13 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "cc5a96db-e8f6-4182-abf3-444dee587a6e",
+      "id": "9d20d3c0-1706-422e-a8ff-b1a09e5b2fd2",
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        -688,
-        192
+        -4832,
+        0
       ],
       "webhookId": "b0ca8c29-8f87-45d4-8995-77dd3a3c8439"
     },
@@ -248,26 +249,26 @@
       "parameters": {
         "jsCode": "const source = $input.first().json;\n\nlet payload = source;\nif (source && typeof source === 'object' && source.body !== undefined) {\n  payload = source.body;\n}\n\nif (typeof payload === 'string') {\n  try {\n    payload = JSON.parse(payload);\n  } catch {\n    payload = {};\n  }\n}\n\nif (!payload || typeof payload !== 'object' || Array.isArray(payload)) {\n  payload = {};\n}\n\nreturn [{ json: payload }];"
       },
-      "id": "fdaed72b-9af3-45da-8bba-6c103fe6b7d3",
+      "id": "bd74acc8-1020-4873-8bf4-6b9dbde0792b",
       "name": "Normalize Input",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -464,
-        192
+        -4608,
+        0
       ]
     },
     {
       "parameters": {
         "jsCode": "const fs = require('fs');\nconst path = fs.existsSync('/data')\n  ? '/data/processed-orders.json'\n  : './data/processed-orders.json';\n\ntry {\n  if (!fs.existsSync(path)) {\n    fs.writeFileSync(path, JSON.stringify([], null, 2));\n  }\n\n  const data = JSON.parse(fs.readFileSync(path, 'utf8'));\n  const orderId = $json.orderId;\n\n  if (!Array.isArray(data)) {\n    return [{\n      json: {\n        success: false,\n        duplicate: true,\n        message: 'Idempotency store is corrupted',\n        orderId\n      }\n    }];\n  }\n\n  if (data.includes(orderId)) {\n    return [{\n      json: {\n        success: false,\n        duplicate: true,\n        message: 'Duplicate order detected',\n        orderId\n      }\n    }];\n  }\n\n  data.push(orderId);\n  fs.writeFileSync(path, JSON.stringify(data, null, 2));\n\n  return [{\n    json: {\n      ...$json,\n      duplicate: false\n    }\n  }];\n} catch (error) {\n  return [{\n    json: {\n      success: false,\n      duplicate: true,\n      message: 'Idempotency check failed: ' + error.message,\n      orderId: $json.orderId\n    }\n  }];\n}"
       },
-      "id": "05b93bc9-e906-4277-adb8-279aa087c480",
+      "id": "c8ed4ccb-54a5-444d-9777-b908bc789307",
       "name": "Check Duplicate Order",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        432,
-        256
+        -3712,
+        64
       ]
     },
     {
@@ -277,21 +278,20 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ { orderId: $json.orderId, amount: $json.amount, forceFail: $json.forceFail ?? false, simulateTransientFailure: $json.simulateTransientFailure ?? false } }}",
-        "options": {
-          "ignoreResponseCode": true
-        }
+        "options": {}
       },
-      "id": "12f0d9e1-db65-4363-a81f-34c7a2027f22",
+      "id": "21d5a942-6e2b-4701-be7f-10485684c878",
       "name": "Process Payment",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        896,
-        320
+        -3248,
+        128
       ],
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 1000
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
     }
   ],
   "pinData": {},
@@ -420,19 +420,20 @@
             "type": "main",
             "index": 0
           }
-        ]
+        ],
+        []
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "7289e3f6-54e2-4fc8-a542-29e931d025a8",
+  "versionId": "5888d1c4-bd7b-4197-a162-a7f4e03261a0",
   "meta": {
-    "instanceId": "4c73094ef6f69f62cfb73a526ad4ed3c04092351a2ee777b5a033f591ccd45ca"
+    "instanceId": "a75ba6d6e649c0d7ec940f1b21d0078206e99e75fdaa856f9741209be371d39a"
   },
-  "id": "zaLldAVBFFWQUo7o",
+  "id": "VCbbgFG7XDwRF6HG",
   "tags": []
 }
