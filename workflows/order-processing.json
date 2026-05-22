@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "jsCode": "const { z } = require('zod');\n\nconst OrderSchema = z.object({\n  orderId: z.string().min(1, 'orderId is required'),\n  email: z.string().email('email must be valid'),\n  amount: z.number().positive('amount must be positive'),\n  dryRun: z.boolean().optional().default(false),\n  forceFail: z.boolean().optional(),\n  simulateTransientFailure: z.boolean().optional()\n});\n\nconst input = $input.first().json;\nconst parsed = OrderSchema.safeParse(input);\n\nif (!parsed.success) {\n  return [\n    {\n      json: {\n        valid: false,\n        success: false,\n        message: 'Invalid payload',\n      }\n    }\n  ];\n}\n\nreturn [\n  {\n    json: {\n      valid: true,\n      success: true,\n      message: 'Payload validated',\n      ...parsed.data\n    }\n  }\n];"
+        "jsCode": "const { z } = require('zod');\n\nconst OrderSchema = z.object({\n  orderId: z.string().min(1, 'orderId is required'),\n  email: z.string().email('email must be valid'),\n  amount: z.number().positive('amount must be positive'),\n  dryRun: z.boolean().optional().default(false),\n  forceFail: z.boolean().optional(),\n  simulateTransientFailure: z.boolean().optional(),\n  useMockPayment: z.boolean().optional().default(false)\n});\n\nconst input = $input.first().json;\nconst parsed = OrderSchema.safeParse(input);\n\nif (!parsed.success) {\n  return [\n    {\n      json: {\n        valid: false,\n        success: false,\n        message: 'Invalid payload',\n      }\n    }\n  ];\n}\n\nreturn [\n  {\n    json: {\n      valid: true,\n      success: true,\n      message: 'Payload validated',\n      ...parsed.data\n    }\n  }\n];"
       },
       "id": "e90a890a-d4a8-4ab6-82c7-a6afa293dcb3",
       "name": "Zod Validation",
@@ -158,8 +158,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -3024,
-        128
+        1344,
+        224
       ]
     },
     {
@@ -175,8 +175,8 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        -2800,
-        48
+        1568,
+        144
       ]
     },
     {
@@ -192,8 +192,8 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        -2800,
-        224
+        1568,
+        336
       ]
     },
     {
@@ -285,13 +285,83 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        -3248,
-        128
+        1120,
+        320
       ],
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000,
       "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {},
+      "id": "0b8d9af4-f4d3-4b72-956e-7be8f2121da1",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -960,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"orderId\": \"ORD-MANUAL-1001\",\n  \"email\": \"manual@example.com\",\n  \"amount\": 120,\n  \"dryRun\": false,\n  \"useMockPayment\": true\n}"
+      },
+      "id": "8dd7c4fa-c9a3-4a9f-89f5-df2ec6d26f1c",
+      "name": "Set Test Input",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -720,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ String($json.useMockPayment) }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          }
+        },
+        "options": {}
+      },
+      "id": "f1384a2f-7ed7-49b3-96f1-2d04f5dd952a",
+      "name": "Use Mock Payment IF",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        896,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    success: true,\n    message: 'Payment accepted (mock branch)',\n    paymentId: 'pay_mock_inline_001',\n    orderId: $json.orderId\n  }\n}];"
+      },
+      "id": "37e843fd-e8cb-4ab0-8a2f-5b688f3d2f95",
+      "name": "Mock Payment Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        128
+      ]
     }
   ],
   "pinData": {},
@@ -336,7 +406,7 @@
         ],
         [
           {
-            "node": "Process Payment",
+            "node": "Use Mock Payment IF",
             "type": "main",
             "index": 0
           }
@@ -422,6 +492,57 @@
           }
         ],
         []
+      ]
+    },
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set Test Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Test Input": {
+      "main": [
+        [
+          {
+            "node": "Normalize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Use Mock Payment IF": {
+      "main": [
+        [
+          {
+            "node": "Mock Payment Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Process Payment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mock Payment Response": {
+      "main": [
+        [
+          {
+            "node": "Payment Success IF",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
